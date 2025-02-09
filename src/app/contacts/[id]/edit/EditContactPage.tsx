@@ -1,15 +1,11 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import Image from 'next/image'
 import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css"
-import { doc, getDoc, updateDoc, deleteDoc, addDoc, collection, query, where, getDocs } from 'firebase/firestore'
+import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
-import { CloudinaryWidgetOptions } from '@/types/cloudinary'
-import { DocumentData } from 'firebase/firestore'
 
 type FormData = {
   id: string;
@@ -33,7 +29,6 @@ export default function EditContactPage({ id }: EditContactPageProps) {
   const router = useRouter()
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
-  const [isUploading, setIsUploading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [formData, setFormData] = useState<FormData>({
     id: '',
@@ -83,7 +78,7 @@ export default function EditContactPage({ id }: EditContactPageProps) {
           where('targetId', '==', id)
         )
 
-        const [relationshipsSnap, reverseRelationshipsSnap] = await Promise.all([
+        await Promise.all([
           getDocs(relationshipsQuery),
           getDocs(reverseRelationshipsQuery)
         ])
