@@ -46,10 +46,10 @@ async function deleteCloudinaryImage(photoUrl: string) {
 // Get a single contact
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
-    const { id } = params
+    const { id } = context.params
     const session = await getServerSession()
     
     if (!session?.user?.id) {
@@ -87,10 +87,10 @@ export async function GET(
 // Update a contact
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
-    const { id } = params
+    const { id } = context.params
     const session = await getServerSession()
     
     if (!session?.user?.id) {
@@ -194,10 +194,10 @@ export async function PUT(
 // Delete a contact
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
-    const { id } = params
+    const { id } = context.params
     const session = await getServerSession()
     
     if (!session?.user?.id) {
