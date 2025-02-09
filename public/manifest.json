@@ -1,11 +1,11 @@
 {
   "name": "Personal CRM",
-  "short_name": "Personal CRM",
+  "short_name": "PCRM",
   "description": "Manage your personal and professional relationships",
-  "start_url": "/",
+  "start_url": "/contacts",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#ffffff",
+  "background_color": "#4f46e5",
   "theme_color": "#4f46e5",
   "icons": [
     {
@@ -17,12 +17,14 @@
     {
       "src": "/icons/icon-384x384.png",
       "sizes": "384x384",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 } 

@@ -1,5 +1,5 @@
-const CACHE_NAME = 'pcrm-cache-v2';
-const VERSION = '1.0.1';
+const CACHE_NAME = 'pcrm-cache-v3';
+const VERSION = '1.0.2';
 
 const STATIC_ASSETS = [
   '/manifest.json',
@@ -49,14 +49,26 @@ self.addEventListener('message', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Parse the URL
   const url = new URL(event.request.url);
   
+  // Handle root URL redirect
+  if (url.pathname === '/' || url.pathname === '') {
+    event.respondWith(
+      Response.redirect('/contacts', 302)
+    );
+    return;
+  }
+
   // Network-first strategy for API requests and dynamic data
-  if (url.pathname.includes('/contacts/') || event.request.method !== 'GET') {
+  if (url.pathname.includes('/contacts') || event.request.method !== 'GET') {
     event.respondWith(
       fetch(event.request)
         .then(response => {
+          // Don't cache redirects
+          if (response.type === 'opaqueredirect' || response.redirected) {
+            return response;
+          }
+          
           // Clone the response before using it
           const responseToCache = response.clone();
           
