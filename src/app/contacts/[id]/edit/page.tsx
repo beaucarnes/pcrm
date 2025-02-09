@@ -58,6 +58,7 @@ type CloudinaryCallbackResult = {
 
 type PageProps = {
   params: { id: string }
+  searchParams?: { [key: string]: string | string[] | undefined }
 }
 
 declare global {
@@ -82,7 +83,7 @@ type RelatedContact = {
   createdAt: string;
 }
 
-export default function EditContactPage({ params }: PageProps) {
+export default function EditContactPage({ params, searchParams }: PageProps) {
   const router = useRouter()
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
