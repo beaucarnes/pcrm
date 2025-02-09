@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
 import { v2 as cloudinary } from 'cloudinary'
@@ -45,11 +45,11 @@ async function deleteCloudinaryImage(photoUrl: string) {
 
 // Get a single contact
 export async function GET(
-  request: Request,
-  context: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = context.params
+    const { id } = params
     const session = await getServerSession()
     
     if (!session?.user?.id) {
@@ -86,11 +86,11 @@ export async function GET(
 
 // Update a contact
 export async function PUT(
-  request: Request,
-  context: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = context.params
+    const { id } = params
     const session = await getServerSession()
     
     if (!session?.user?.id) {
@@ -193,11 +193,11 @@ export async function PUT(
 
 // Delete a contact
 export async function DELETE(
-  request: Request,
-  context: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = context.params
+    const { id } = params
     const session = await getServerSession()
     
     if (!session?.user?.id) {

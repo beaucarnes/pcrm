@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
 
@@ -11,11 +11,11 @@ const RelationshipSchema = z.object({
 })
 
 export async function POST(
-  request: Request,
-  context: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = context.params
+    const { id } = params
     const body = await request.json()
     const validatedData = RelationshipSchema.parse(body)
 
@@ -73,11 +73,11 @@ export async function POST(
 }
 
 export async function GET(
-  request: Request,
-  context: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = context.params
+    const { id } = params
     const relationships = await prisma.relationship.findMany({
       where: {
         OR: [
@@ -101,11 +101,11 @@ export async function GET(
 }
 
 export async function DELETE(
-  request: Request,
-  context: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = context.params
+    const { id } = params
     const { targetId, type } = await request.json()
 
     const relationship = await prisma.relationship.findFirst({
