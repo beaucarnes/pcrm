@@ -1,9 +1,10 @@
 import EditContactPage from './EditContactPage'
 
 type PageProps = {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
-export default function EditContactServerPage({ params }: PageProps) {
-  return <EditContactPage id={params.id} />
+export default async function EditContactServerPage({ params }: PageProps) {
+  const resolvedParams = await params
+  return <EditContactPage id={resolvedParams.id} />
 } 
