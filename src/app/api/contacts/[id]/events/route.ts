@@ -12,7 +12,7 @@ const EventSchema = z.object({
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     const body = await request.json()
@@ -23,7 +23,7 @@ export async function POST(
         date: new Date(validatedData.date),
         title: validatedData.title,
         description: validatedData.description,
-        contactId: params.id,
+        contactId: context.params.id,
       },
     })
 
@@ -39,12 +39,12 @@ export async function POST(
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     const events = await prisma.event.findMany({
       where: {
-        contactId: params.id,
+        contactId: context.params.id,
       },
       orderBy: {
         date: 'desc',
