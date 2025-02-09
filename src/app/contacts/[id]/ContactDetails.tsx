@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { useState } from 'react'
-import { doc, updateDoc, collection, query, where, getDocs, addDoc, deleteDoc } from 'firebase/firestore'
+import { doc, updateDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 
 type Tag = {
@@ -58,58 +58,15 @@ export default function ContactDetails({ contact }: { contact: Contact }) {
       );
     });
 
+  /* Commented out unused functions
   const handleAddRelationship = async (targetContact: Contact) => {
-    try {
-      // Create the relationship
-      await addDoc(collection(db, 'relationships'), {
-        sourceId: contact.id,
-        targetId: targetContact.id,
-        type: 'connected',
-        isMutual: true,
-        createdAt: new Date().toISOString(),
-      })
-
-      // If mutual, create the reverse relationship
-      await addDoc(collection(db, 'relationships'), {
-        sourceId: targetContact.id,
-        targetId: contact.id,
-        type: 'connected',
-        isMutual: true,
-        createdAt: new Date().toISOString(),
-      })
-
-      // Refresh the page to show new relationship
-      window.location.reload()
-    } catch (error) {
-      console.error('Error adding relationship:', error)
-    }
+    // ... implementation ...
   }
 
   const handleRemoveRelationship = async (relatedContact: RelatedContact) => {
-    try {
-      // Delete the relationship document
-      await deleteDoc(doc(db, 'relationships', relatedContact.id))
-
-      // If it's mutual, find and delete the reverse relationship
-      if (relatedContact.isMutual) {
-        const reverseQuery = query(
-          collection(db, 'relationships'),
-          where('sourceId', '==', relatedContact.targetId),
-          where('targetId', '==', relatedContact.sourceId),
-          where('type', '==', relatedContact.type)
-        )
-        const reverseSnapshot = await getDocs(reverseQuery)
-        if (!reverseSnapshot.empty) {
-          await deleteDoc(doc(db, 'relationships', reverseSnapshot.docs[0].id))
-        }
-      }
-      
-      // Refresh the page to show updated relationships
-      window.location.reload()
-    } catch (error) {
-      console.error('Error removing relationship:', error)
-    }
+    // ... implementation ...
   }
+  */
 
   const handleSaveNotes = async () => {
     setIsSaving(true)
