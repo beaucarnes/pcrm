@@ -49,14 +49,21 @@ export default function ContactDetails({ contact }: { contact: Contact }) {
   const [error, setError] = useState('')
 
   // Get all relationships (both directions)
+  console.log('Contact relationships:', contact.relationships)
+  console.log('Contact reverse relationships:', contact.reverseRelationships)
+  
   const allRelationships = [...(contact.relationships || []), ...(contact.reverseRelationships || [])]
     .filter((relationship, index, self) => {
       // Keep only the first occurrence of each relationship pair
-      return index === self.findIndex(r => 
+      const isDuplicate = index !== self.findIndex(r => 
         (r.sourceId === relationship.sourceId && r.targetId === relationship.targetId) ||
         (r.sourceId === relationship.targetId && r.targetId === relationship.sourceId)
       );
+      console.log('Relationship:', relationship, 'isDuplicate:', isDuplicate)
+      return !isDuplicate;
     });
+
+  console.log('All filtered relationships:', allRelationships)
 
   /* Commented out unused functions
   const handleAddRelationship = async (targetContact: Contact) => {
@@ -248,26 +255,35 @@ export default function ContactDetails({ contact }: { contact: Contact }) {
           )}
 
           {/* Related Contacts */}
-          {allRelationships.length > 0 && (
-            <div>
-              <h3 className="text-base font-semibold text-gray-900">Related Contacts</h3>
-              <div className="mt-3 space-y-2">
-                {allRelationships.map((relationship) => {
-                  const relatedContact = relationship.sourceId === contact.id ? relationship.target : relationship.source;
-                  return (
-                    <div key={relationship.id} className="flex items-center justify-between">
-                      <Link
-                        href={`/contacts/${relatedContact.id}`}
-                        className="text-sm text-indigo-600 hover:text-indigo-500"
-                      >
-                        {relatedContact.name}
-                      </Link>
-                    </div>
-                  );
-                })}
+          {(() => {
+            console.log('Rendering relationships section, count:', allRelationships.length);
+            return (
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">Related Contacts</h3>
+                <div className="mt-3 space-y-2">
+                  {allRelationships.length === 0 ? (
+                    <p className="text-sm text-gray-500">No related contacts.</p>
+                  ) : (
+                    allRelationships.map((relationship) => {
+                      console.log('Rendering relationship:', relationship);
+                      const relatedContact = relationship.sourceId === contact.id ? relationship.target : relationship.source;
+                      console.log('Related contact:', relatedContact);
+                      return (
+                        <div key={relationship.id} className="flex items-center justify-between">
+                          <Link
+                            href={`/contacts/${relatedContact.id}`}
+                            className="text-sm text-indigo-600 hover:text-indigo-500"
+                          >
+                            {relatedContact.name}
+                          </Link>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Tags */}
           {contact.tags?.length > 0 && (

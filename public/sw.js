@@ -1,18 +1,20 @@
-const CACHE_NAME = 'pcrm-cache-v1';
-const VERSION = '1.0.0';
+const CACHE_NAME = 'pcrm-cache-v2';
+const VERSION = '1.0.1';
+
+const STATIC_ASSETS = [
+  '/',
+  '/manifest.json',
+  '/favicon.ico',
+  '/app-icon.png',
+  '/icons/icon-192x192.png',
+  '/icons/icon-384x384.png',
+  '/icons/icon-512x512.png'
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll([
-        '/',
-        '/manifest.json',
-        '/favicon.ico',
-        '/app-icon.png',
-        '/icons/icon-192x192.png',
-        '/icons/icon-384x384.png',
-        '/icons/icon-512x512.png'
-      ]);
+      return cache.addAll(STATIC_ASSETS);
     })
   );
 });
@@ -39,28 +41,47 @@ self.addEventListener('message', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      // Cache hit - return response
-      if (response) {
-        return response;
-      }
-
-      return fetch(event.request).then((response) => {
-        // Check if we received a valid response
-        if (!response || response.status !== 200 || response.type !== 'basic') {
+  // Parse the URL
+  const url = new URL(event.request.url);
+  
+  // Network-first strategy for API requests and dynamic data
+  if (url.pathname.includes('/contacts/') || event.request.method !== 'GET') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // Clone the response before using it
+          const responseToCache = response.clone();
+          
+          // Cache the fresh data
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseToCache);
+          });
+          
+          return response;
+        })
+        .catch(() => {
+          // If network fails, try to get from cache
+          return caches.match(event.request);
+        })
+    );
+  } else {
+    // Cache-first strategy for static assets
+    event.respondWith(
+      caches.match(event.request).then((response) => {
+        if (response) {
           return response;
         }
-
-        // Clone the response
-        const responseToCache = response.clone();
-
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
+        return fetch(event.request).then((response) => {
+          if (!response || response.status !== 200 || response.type !== 'basic') {
+            return response;
+          }
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+          return response;
         });
-
-        return response;
-      });
-    })
-  );
+      })
+    );
+  }
 }); 
