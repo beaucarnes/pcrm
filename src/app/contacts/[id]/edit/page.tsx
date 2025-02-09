@@ -268,14 +268,14 @@ export default function EditContactPage({ params }: PageProps) {
 
         setIsLoading(false)
       } catch (error) {
-        console.error('Error:', error)
-        setError(error instanceof Error ? error.message : 'An error occurred')
+        console.error('Error fetching contact:', error)
+        setError('Failed to fetch contact')
         setIsLoading(false)
       }
     })
 
     return () => unsubscribe()
-  }, [params.id, router, formData])
+  }, [params.id, router])
 
   // Reset selected index when search results change
   useEffect(() => {
@@ -311,6 +311,8 @@ export default function EditContactPage({ params }: PageProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!params.id) return
+
     setError('')
 
     if (!auth.currentUser) {
@@ -363,16 +365,9 @@ export default function EditContactPage({ params }: PageProps) {
     }))
   }
 
-  async function handleDelete() {
-    if (!window.confirm('Are you sure you want to delete this contact? This action cannot be undone.')) {
-      return
-    }
-
-    if (!auth.currentUser) {
-      setError('You must be signed in to delete a contact')
-      return
-    }
-
+  const handleDelete = async () => {
+    if (!params.id) return
+    
     setIsDeleting(true)
     try {
       const docRef = doc(db, 'contacts', params.id)
