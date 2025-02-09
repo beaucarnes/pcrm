@@ -9,14 +9,7 @@ import "react-datepicker/dist/react-datepicker.css"
 import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
 import { use } from 'react'
-
-declare global {
-  interface Window {
-    cloudinary: {
-      createUploadWidget: (options: any, callback: (error: Error | null, result: { event: string; info?: { secure_url: string } }) => void) => any;
-    };
-  }
-}
+import { CloudinaryWidgetOptions } from '@/types/cloudinary'
 
 type Tag = {
   id: string;
@@ -39,6 +32,17 @@ type Contact = {
 
 type PageProps = {
   params: Promise<{ id: string }>
+}
+
+declare global {
+  interface Window {
+    cloudinary: {
+      createUploadWidget: (
+        options: CloudinaryWidgetOptions,
+        callback: (error: Error | null, result: { event: string; info?: { secure_url: string } }) => void
+      ) => { open: () => void };
+    };
+  }
 }
 
 export default function EditContactPage({ params }: PageProps) {

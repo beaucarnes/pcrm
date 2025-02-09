@@ -8,11 +8,23 @@ import "react-datepicker/dist/react-datepicker.css"
 import { useRouter } from 'next/navigation'
 import { collection, addDoc } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
+import { CloudinaryWidgetOptions } from '@/types/cloudinary'
 
 type CloudinaryUploadResult = {
   info: {
     secure_url: string;
   };
+}
+
+declare global {
+  interface Window {
+    cloudinary: {
+      createUploadWidget: (
+        options: CloudinaryWidgetOptions,
+        callback: (error: Error | null, result: { event: string; info?: { secure_url: string } }) => void
+      ) => { open: () => void };
+    };
+  }
 }
 
 export default function NewContactPage() {
@@ -145,7 +157,6 @@ export default function NewContactPage() {
               }}
               onQueuesEnd={(result, { widget }) => {
                 setIsUploading(false);
-                widget.close();
               }}
               options={{
                 maxFiles: 1,
