@@ -14,7 +14,7 @@ export default function SignInButton() {
     });
 
     // Check for redirect result
-    getRedirectResult(auth).then((result) => {
+    getRedirectResult(auth).then(() => {
       setIsSigningIn(false);
     }).catch((error) => {
       console.error('Error getting redirect result:', error);
