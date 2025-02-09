@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { useState } from 'react'
-import { doc, updateDoc, collection, query, where, getDocs, addDoc, deleteDoc, limit } from 'firebase/firestore'
+import { doc, updateDoc, collection, query, where, getDocs, addDoc, deleteDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 
 type Tag = {
@@ -47,9 +47,6 @@ export default function ContactDetails({ contact }: { contact: Contact }) {
   const [notes, setNotes] = useState(contact.notes || '')
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<Contact[]>([])
-  const [isSearching, setIsSearching] = useState(false)
 
   // Get all relationships (both directions)
   const allRelationships = [...(contact.relationships || []), ...(contact.reverseRelationships || [])]
@@ -60,72 +57,6 @@ export default function ContactDetails({ contact }: { contact: Contact }) {
         (r.sourceId === relationship.targetId && r.targetId === relationship.sourceId)
       );
     });
-
-  const handleSearch = async (searchText: string) => {
-    setSearchQuery(searchText)
-    if (!searchText.trim()) {
-      setSearchResults([])
-      return
-    }
-
-    setIsSearching(true)
-    try {
-      const contactsRef = collection(db, 'contacts')
-      const searchQuery = query(
-        contactsRef,
-        where('userId', '==', contact.userId)
-      )
-      const querySnapshot = await getDocs(searchQuery)
-      
-      const results: Contact[] = []
-      querySnapshot.forEach((doc) => {
-        const data = doc.data() as {
-          name: string;
-          birthday: string | null;
-          photoUrl: string | null;
-          email: string | null;
-          phone: string | null;
-          address: string | null;
-          company: string | null;
-          jobTitle: string | null;
-          notes: string | null;
-          tags: Tag[];
-          userId: string;
-          createdAt: string;
-          updatedAt: string;
-        }
-        
-        // Filter by name client-side
-        if (doc.id !== contact.id && 
-            data.name.toLowerCase().includes(searchText.toLowerCase())) {
-          results.push({
-            id: doc.id,
-            name: data.name,
-            birthday: data.birthday,
-            photoUrl: data.photoUrl,
-            email: data.email,
-            phone: data.phone,
-            address: data.address,
-            company: data.company,
-            jobTitle: data.jobTitle,
-            notes: data.notes,
-            tags: Array.isArray(data.tags) ? data.tags : [],
-            userId: data.userId,
-            createdAt: data.createdAt,
-            updatedAt: data.updatedAt,
-            relationships: [],
-            reverseRelationships: [],
-          })
-        }
-      })
-      
-      setSearchResults(results)
-    } catch (error) {
-      console.error('Error searching contacts:', error)
-    } finally {
-      setIsSearching(false)
-    }
-  }
 
   const handleAddRelationship = async (targetContact: Contact) => {
     try {
@@ -147,10 +78,6 @@ export default function ContactDetails({ contact }: { contact: Contact }) {
         createdAt: new Date().toISOString(),
       })
 
-      // Clear search
-      setSearchQuery('')
-      setSearchResults([])
-      
       // Refresh the page to show new relationship
       window.location.reload()
     } catch (error) {
