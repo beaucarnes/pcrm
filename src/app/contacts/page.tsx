@@ -12,17 +12,25 @@ type Contact = {
   photoUrl: string | null
   jobTitle: string | null
   company: string | null
+  notes: string | null
   tags: Array<{
     id: string
     name: string
   }>
 }
 
+type TagCount = {
+  name: string;
+  count: number;
+}
+
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState(auth.currentUser)
+  const [tagCounts, setTagCounts] = useState<TagCount[]>([])
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
@@ -43,6 +51,8 @@ export default function ContactsPage() {
       // Listen to query
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const contactsData: Contact[] = [];
+        const tagMap = new Map<string, number>();
+
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           contactsData.push({
@@ -51,9 +61,22 @@ export default function ContactsPage() {
             photoUrl: data.photoUrl,
             jobTitle: data.jobTitle,
             company: data.company,
+            notes: data.notes,
             tags: data.tags || [],
           });
+
+          // Count tags
+          (data.tags || []).forEach((tag: { name: string }) => {
+            tagMap.set(tag.name, (tagMap.get(tag.name) || 0) + 1);
+          });
         });
+
+        // Sort tags by count
+        const sortedTags = Array.from(tagMap.entries())
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => b.count - a.count);
+
+        setTagCounts(sortedTags);
         setContacts(contactsData);
         setIsLoading(false);
       }, (error) => {
@@ -67,22 +90,28 @@ export default function ContactsPage() {
     return () => unsubscribeAuth();
   }, []);
 
-  const filteredContacts = contacts.filter(contact => {
-    const searchLower = searchQuery.toLowerCase()
-    return (
-      contact.name.toLowerCase().includes(searchLower) ||
-      (contact.company?.toLowerCase() || '').includes(searchLower) ||
-      (contact.jobTitle?.toLowerCase() || '').includes(searchLower) ||
-      contact.tags.some(tag => tag.name.toLowerCase().includes(searchLower))
-    )
-  })
+  const filteredContacts = contacts
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .filter(contact => {
+      const matchesSearch = searchQuery.toLowerCase().trim() === '' ||
+        contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (contact.company?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (contact.jobTitle?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        contact.tags.some(tag => tag.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      const matchesTag = !selectedTag ||
+        contact.tags.some(tag => tag.name === selectedTag);
+
+      return matchesSearch && matchesTag;
+    });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 mb-8">
-        <h1 className="text-2xl font-semibold text-gray-900">Contacts</h1>
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 sm:min-w-[300px]">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-8">
+      {/* Search and Tags Section */}
+      <div className="mb-2">
+        <div className="flex flex-col sm:flex-row gap-2">
+          {/* Search Box */}
+          <div className="relative flex-1">
             <input
               type="text"
               value={searchQuery}
@@ -102,15 +131,35 @@ export default function ContactsPage() {
               </button>
             )}
           </div>
-          {user && (
-            <Link
-              href="/contacts/new"
-              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 whitespace-nowrap"
-            >
-              Add Contact
-            </Link>
-          )}
         </div>
+
+        {/* Tags */}
+        {tagCounts.length > 0 && (
+          <div className="mt-2 sm:mt-2">
+            <div className="relative">
+              <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-2">
+                {tagCounts.map(({ name, count }) => (
+                  <button
+                    key={name}
+                    onClick={() => setSelectedTag(selectedTag === name ? null : name)}
+                    className={`inline-flex items-center whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset transition-colors duration-200 ${
+                      selectedTag === name
+                        ? 'bg-indigo-600 text-white ring-indigo-600'
+                        : 'bg-indigo-50 text-indigo-700 ring-indigo-700/10 hover:bg-indigo-100'
+                    }`}
+                  >
+                    {name}
+                    <span className={`ml-1 ${
+                      selectedTag === name ? 'text-indigo-100' : 'text-indigo-400'
+                    }`}>
+                      ({count})
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -124,7 +173,7 @@ export default function ContactsPage() {
           </h3>
         </div>
       ) : filteredContacts.length > 0 ? (
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredContacts.map((contact) => (
             <div
               key={contact.id}
@@ -156,7 +205,11 @@ export default function ContactsPage() {
                     {contact.name}
                   </h2>
                   
-                  {(contact.jobTitle || contact.company) && (
+                  {contact.notes ? (
+                    <p className="mt-2 text-sm text-gray-600 line-clamp-2">
+                      {contact.notes}
+                    </p>
+                  ) : (contact.jobTitle || contact.company) && (
                     <p className="mt-2 text-sm text-gray-600">
                       {[contact.jobTitle, contact.company].filter(Boolean).join(' at ')}
                     </p>
@@ -207,12 +260,12 @@ export default function ContactsPage() {
             />
           </svg>
           <h3 className="mt-2 text-sm font-semibold text-gray-900">
-            {searchQuery ? 'No matching contacts found' : 'No contacts'}
+            {searchQuery || selectedTag ? 'No matching contacts found' : 'No contacts'}
           </h3>
           <p className="mt-1 text-sm text-gray-500">
-            {searchQuery ? 'Try adjusting your search terms' : 'Get started by creating a new contact.'}
+            {searchQuery || selectedTag ? 'Try adjusting your search terms or selected tag' : 'Get started by creating a new contact.'}
           </p>
-          {!searchQuery && (
+          {!searchQuery && !selectedTag && (
             <div className="mt-6">
               <Link
                 href="/contacts/new"

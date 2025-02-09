@@ -6,10 +6,11 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css"
-import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore'
+import { doc, getDoc, updateDoc, deleteDoc, addDoc, collection, query, where, getDocs, limit } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
 import { use } from 'react'
 import { CloudinaryWidgetOptions } from '@/types/cloudinary'
+import { DocumentData } from 'firebase/firestore'
 
 type Tag = {
   id: string;
@@ -19,15 +20,34 @@ type Tag = {
 type Contact = {
   id: string;
   name: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  company?: string;
-  jobTitle?: string;
-  notes?: string;
+  birthday: string | null;
+  photoUrl: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  company: string | null;
+  jobTitle: string | null;
+  notes: string | null;
   tags: Tag[];
-  photoUrl?: string;
-  birthday?: string | null;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+  relationships: RelatedContact[];
+  reverseRelationships: RelatedContact[];
+}
+
+type FormData = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  company: string;
+  jobTitle: string;
+  notes: string;
+  photoUrl: string;
+  birthday: Date | null;
+  tags: Tag[];
 }
 
 type CloudinaryCallbackResult = {
@@ -52,6 +72,17 @@ declare global {
   }
 }
 
+type RelatedContact = {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  type: string;
+  isMutual: boolean;
+  source: Contact;
+  target: Contact;
+  createdAt: string;
+}
+
 export default function EditContactPage({ params }: PageProps) {
   const { id } = use(params)
   const router = useRouter()
@@ -59,13 +90,25 @@ export default function EditContactPage({ params }: PageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [formData, setFormData] = useState<Contact>({
-    id,
+  const [formData, setFormData] = useState<FormData>({
+    id: '',
     name: '',
-    tags: [],
+    email: '',
+    phone: '',
+    address: '',
+    company: '',
+    jobTitle: '',
+    notes: '',
+    photoUrl: '',
     birthday: null,
+    tags: [],
   })
   const [newTag, setNewTag] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<Contact[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState(-1)
+  const [allRelationships, setAllRelationships] = useState<RelatedContact[]>([])
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -91,22 +134,144 @@ export default function EditContactPage({ params }: PageProps) {
           return
         }
         
+        // Fetch relationships
+        const relationshipsQuery = query(
+          collection(db, 'relationships'),
+          where('sourceId', '==', id)
+        )
+        const reverseRelationshipsQuery = query(
+          collection(db, 'relationships'),
+          where('targetId', '==', id)
+        )
+
+        const [relationshipsSnap, reverseRelationshipsSnap] = await Promise.all([
+          getDocs(relationshipsQuery),
+          getDocs(reverseRelationshipsQuery)
+        ])
+
+        // Fetch related contacts data
+        const relationships = await Promise.all(relationshipsSnap.docs.map(async relationshipDoc => {
+          const relationshipData = relationshipDoc.data()
+          const targetDocRef = doc(db, 'contacts', relationshipData.targetId)
+          const targetDocSnap = await getDoc(targetDocRef)
+          const targetData = targetDocSnap.data() as DocumentData
+          if (!targetData) {
+            console.error('Target contact data not found')
+            return null
+          }
+          return {
+            id: relationshipDoc.id,
+            sourceId: relationshipData.sourceId,
+            targetId: relationshipData.targetId,
+            type: relationshipData.type,
+            isMutual: relationshipData.isMutual,
+            createdAt: relationshipData.createdAt,
+            target: {
+              id: targetDocSnap.id,
+              name: targetData.name || '',
+              birthday: targetData.birthday || null,
+              photoUrl: targetData.photoUrl || null,
+              email: targetData.email || null,
+              phone: targetData.phone || null,
+              address: targetData.address || null,
+              company: targetData.company || null,
+              jobTitle: targetData.jobTitle || null,
+              notes: targetData.notes || null,
+              tags: targetData.tags || [],
+              userId: targetData.userId,
+              createdAt: targetData.createdAt,
+              updatedAt: targetData.updatedAt,
+              relationships: [],
+              reverseRelationships: []
+            }
+          }
+        }))
+
+        const reverseRelationships = await Promise.all(reverseRelationshipsSnap.docs.map(async relationshipDoc => {
+          const relationshipData = relationshipDoc.data()
+          const sourceDocRef = doc(db, 'contacts', relationshipData.sourceId)
+          const sourceDocSnap = await getDoc(sourceDocRef)
+          const sourceData = sourceDocSnap.data() as DocumentData
+          if (!sourceData) {
+            console.error('Source contact data not found')
+            return null
+          }
+          return {
+            id: relationshipDoc.id,
+            sourceId: relationshipData.sourceId,
+            targetId: relationshipData.targetId,
+            type: relationshipData.type,
+            isMutual: relationshipData.isMutual,
+            createdAt: relationshipData.createdAt,
+            source: {
+              id: sourceDocSnap.id,
+              name: sourceData.name || '',
+              birthday: sourceData.birthday || null,
+              photoUrl: sourceData.photoUrl || null,
+              email: sourceData.email || null,
+              phone: sourceData.phone || null,
+              address: sourceData.address || null,
+              company: sourceData.company || null,
+              jobTitle: sourceData.jobTitle || null,
+              notes: sourceData.notes || null,
+              tags: sourceData.tags || [],
+              userId: sourceData.userId,
+              createdAt: sourceData.createdAt,
+              updatedAt: sourceData.updatedAt,
+              relationships: [],
+              reverseRelationships: []
+            }
+          }
+        }))
+
+        // Filter out any null values and combine relationships
+        const validRelationships = (
+          [...relationships, ...reverseRelationships]
+            .filter((r): r is NonNullable<typeof r> => r !== null)
+            .filter((relationship, index, self) => {
+              // Keep only the first occurrence of each relationship pair
+              return index === self.findIndex(r => 
+                (r.sourceId === relationship.sourceId && r.targetId === relationship.targetId) ||
+                (r.sourceId === relationship.targetId && r.targetId === relationship.sourceId)
+              );
+            })
+            .map(r => {
+              const isForwardRelationship = 'target' in r;
+              return {
+                id: r.id,
+                sourceId: r.sourceId,
+                targetId: r.targetId,
+                type: r.type,
+                isMutual: r.isMutual,
+                createdAt: r.createdAt,
+                source: isForwardRelationship ? formData : r.source,
+                target: isForwardRelationship ? r.target : formData
+              };
+            })
+        ) as RelatedContact[]
+        
+        setAllRelationships(validRelationships)
+
+        // Set form data
+        const birthday = data.birthday ? new Date(data.birthday) : null
         setFormData({
           id: docSnap.id,
           name: data.name,
-          email: data.email,
-          phone: data.phone,
-          address: data.address,
-          company: data.company,
-          jobTitle: data.jobTitle,
-          notes: data.notes,
-          photoUrl: data.photoUrl,
-          birthday: data.birthday,
-          tags: data.tags || [],
+          email: data.email || '',
+          phone: data.phone || '',
+          address: data.address || '',
+          company: data.company || '',
+          jobTitle: data.jobTitle || '',
+          notes: data.notes || '',
+          photoUrl: data.photoUrl || '',
+          birthday,
+          tags: Array.isArray(data.tags) ? data.tags : [],
         })
+
         setIsLoading(false)
       } catch (error) {
-        setError(error instanceof Error ? error.message : 'Failed to load contact')
+        console.error('Error:', error)
+        setError(error instanceof Error ? error.message : 'An error occurred')
         setIsLoading(false)
       }
     })
@@ -114,7 +279,39 @@ export default function EditContactPage({ params }: PageProps) {
     return () => unsubscribe()
   }, [id, router])
 
-  async function handleSubmit(e: React.FormEvent) {
+  // Reset selected index when search results change
+  useEffect(() => {
+    setSelectedIndex(-1)
+  }, [searchResults])
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (searchResults.length === 0) return
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setSelectedIndex(prev => 
+          prev < searchResults.length - 1 ? prev + 1 : prev
+        )
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setSelectedIndex(prev => prev > 0 ? prev - 1 : prev)
+        break
+      case 'Enter':
+        e.preventDefault()
+        if (selectedIndex >= 0 && selectedIndex < searchResults.length) {
+          handleAddRelationship(searchResults[selectedIndex])
+        }
+        break
+      case 'Escape':
+        setSearchQuery('')
+        setSearchResults([])
+        break
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
@@ -125,14 +322,16 @@ export default function EditContactPage({ params }: PageProps) {
 
     try {
       const contactData = {
-        ...formData,
-        email: formData.email?.trim() || null,
-        phone: formData.phone?.trim() || null,
-        address: formData.address?.trim() || null,
-        company: formData.company?.trim() || null,
-        jobTitle: formData.jobTitle?.trim() || null,
-        notes: formData.notes?.trim() || null,
-        photoUrl: formData.photoUrl ? formData.photoUrl.trim() : null,
+        name: formData.name,
+        email: formData.email || null,
+        phone: formData.phone || null,
+        address: formData.address || null,
+        company: formData.company || null,
+        jobTitle: formData.jobTitle || null,
+        notes: formData.notes || null,
+        photoUrl: formData.photoUrl || null,
+        birthday: formData.birthday?.toISOString() || null,
+        tags: formData.tags,
         updatedAt: new Date().toISOString(),
       }
 
@@ -184,6 +383,159 @@ export default function EditContactPage({ params }: PageProps) {
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to delete contact')
       setIsDeleting(false)
+    }
+  }
+
+  const handleSearch = async (searchText: string) => {
+    setSearchQuery(searchText)
+    setIsSearching(true)
+
+    try {
+      if (!auth.currentUser) {
+        setError('You must be signed in to search contacts')
+        return
+      }
+
+      const contactsRef = collection(db, 'contacts')
+      const q = query(
+        contactsRef,
+        where('userId', '==', auth.currentUser.uid)
+      )
+      
+      const querySnapshot = await getDocs(q)
+      const results: Contact[] = []
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data() as DocumentData
+        // Only include contacts that match the search query and aren't the current contact
+        if (doc.id !== id && 
+            data.name.toLowerCase().includes(searchText.toLowerCase())) {
+          results.push({
+            id: doc.id,
+            name: data.name || '',
+            birthday: data.birthday || null,
+            photoUrl: data.photoUrl || null,
+            email: data.email || null,
+            phone: data.phone || null,
+            address: data.address || null,
+            company: data.company || null,
+            jobTitle: data.jobTitle || null,
+            notes: data.notes || null,
+            tags: Array.isArray(data.tags) ? data.tags : [],
+            userId: data.userId,
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+            relationships: [],
+            reverseRelationships: []
+          })
+        }
+      })
+      
+      setSearchResults(results)
+    } catch (error) {
+      console.error('Error searching contacts:', error)
+      setSearchResults([])
+      setError(error instanceof Error ? error.message : 'Failed to search contacts')
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  const handleAddRelationship = async (targetContact: Contact) => {
+    if (!auth.currentUser) {
+      setError('You must be signed in to add a relationship')
+      return
+    }
+
+    try {
+      // Create the relationship
+      const relationshipData = {
+        sourceId: id,
+        targetId: targetContact.id,
+        type: 'connected',
+        isMutual: true,
+        createdAt: new Date().toISOString(),
+      }
+
+      const relationshipRef = await addDoc(collection(db, 'relationships'), relationshipData)
+
+      // If mutual, create the reverse relationship
+      await addDoc(collection(db, 'relationships'), {
+        sourceId: targetContact.id,
+        targetId: id,
+        type: 'connected',
+        isMutual: true,
+        createdAt: new Date().toISOString(),
+      })
+
+      const newRelationship: RelatedContact = {
+        id: relationshipRef.id,
+        sourceId: id,
+        targetId: targetContact.id,
+        type: 'connected',
+        isMutual: true,
+        createdAt: new Date().toISOString(),
+        source: {
+          ...formData,
+          userId: auth.currentUser.uid,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          relationships: [],
+          reverseRelationships: [],
+          birthday: formData.birthday?.toISOString() || null,
+          email: formData.email || null,
+          phone: formData.phone || null,
+          address: formData.address || null,
+          company: formData.company || null,
+          jobTitle: formData.jobTitle || null,
+          notes: formData.notes || null,
+          photoUrl: formData.photoUrl || null,
+        },
+        target: targetContact
+      }
+
+      setAllRelationships(prev => [...prev, newRelationship])
+
+      // Clear search
+      setSearchQuery('')
+      setSearchResults([])
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to add relationship')
+      console.error('Error adding relationship:', error)
+    }
+  }
+
+  const handleRemoveRelationship = async (relationship: RelatedContact) => {
+    if (!window.confirm('Are you sure you want to remove this relationship? This action cannot be undone.')) {
+      return
+    }
+
+    if (!auth.currentUser) {
+      setError('You must be signed in to remove a relationship')
+      return
+    }
+
+    try {
+      // Delete the relationship document
+      await deleteDoc(doc(db, 'relationships', relationship.id))
+
+      // If it's mutual, find and delete the reverse relationship
+      if (relationship.isMutual) {
+        const reverseQuery = query(
+          collection(db, 'relationships'),
+          where('sourceId', '==', relationship.targetId),
+          where('targetId', '==', relationship.sourceId),
+          where('type', '==', relationship.type)
+        )
+        const reverseSnapshot = await getDocs(reverseQuery)
+        if (!reverseSnapshot.empty) {
+          await deleteDoc(doc(db, 'relationships', reverseSnapshot.docs[0].id))
+        }
+      }
+
+      setAllRelationships(prev => prev.filter(r => r.id !== relationship.id))
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to remove relationship')
     }
   }
 
@@ -545,14 +897,77 @@ export default function EditContactPage({ params }: PageProps) {
                   </div>
                 </div>
 
+                {/* Related Contacts */}
+                <div className="border-b border-gray-900/10 pb-6">
+                  <h3 className="text-base font-semibold leading-7 text-gray-900">Related Contacts</h3>
+                  <div className="mt-4">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => handleSearch(e.target.value)}
+                        onKeyDown={handleSearchKeyDown}
+                        placeholder="Search contacts to add..."
+                        className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                      />
+                      {searchQuery && searchResults.length > 0 && (
+                        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                          {searchResults.map((result, index) => (
+                            <button
+                              key={result.id}
+                              onClick={() => handleAddRelationship(result)}
+                              className={`block w-full px-4 py-2 text-left text-sm ${
+                                index === selectedIndex
+                                  ? 'bg-indigo-600 text-white'
+                                  : 'text-gray-900 hover:bg-gray-100'
+                              }`}
+                            >
+                              {result.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {searchQuery && isSearching && (
+                        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md py-2 text-center text-sm text-gray-500">
+                          Searching...
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="mt-4 space-y-3">
+                      {allRelationships.length > 0 ? (
+                        allRelationships.map((relationship) => {
+                          const relatedContact = relationship.sourceId === id ? relationship.target : relationship.source
+                          return (
+                            <div key={relationship.id} className="flex items-center justify-between">
+                              <span className="text-sm text-gray-900">
+                                {relatedContact.name}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveRelationship(relationship)}
+                                className="text-sm text-red-600 hover:text-red-500"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          )
+                        })
+                      ) : (
+                        <p className="text-sm text-gray-500">No related contacts yet.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Birthday */}
                 <div>
                   <label htmlFor="birthday" className="block text-sm font-medium text-gray-900">
                     Birthday
                   </label>
                   <DatePicker
-                    selected={formData.birthday ? new Date(formData.birthday) : null}
-                    onChange={(date: Date | null) => setFormData(prev => ({ ...prev, birthday: date?.toISOString() || null }))}
+                    selected={formData.birthday}
+                    onChange={(date: Date | null) => setFormData(prev => ({ ...prev, birthday: date }))}
                     className="mt-1 block w-full rounded-md border-0 px-3 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                     placeholderText="Select birthday"
                     dateFormat="MMMM d, yyyy"
