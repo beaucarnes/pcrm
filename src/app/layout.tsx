@@ -6,12 +6,18 @@ import Script from 'next/script'
 
 const inter = Inter({ subsets: ['latin'] })
 
+export const viewport = {
+  themeColor: '#4f46e5',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
+}
+
 export const metadata = {
   title: 'Personal CRM',
   description: 'Manage your personal and professional relationships',
   manifest: '/manifest.json',
-  themeColor: '#4f46e5',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

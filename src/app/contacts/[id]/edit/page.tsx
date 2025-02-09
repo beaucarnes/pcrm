@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, use } from 'react'
 import Image from 'next/image'
 import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css"
@@ -57,8 +57,7 @@ type CloudinaryCallbackResult = {
 }
 
 type PageProps = {
-  params: { id: string }
-  searchParams?: { [key: string]: string | string[] | undefined }
+  params: Promise<{ id: string }>
 }
 
 declare global {
@@ -83,12 +82,13 @@ type RelatedContact = {
   createdAt: string;
 }
 
-export default function EditContactPage({ params, searchParams }: PageProps) {
+export default function EditContactPage({ params }: PageProps) {
   const router = useRouter()
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const { id } = use(params)
   const [formData, setFormData] = useState<FormData>({
     id: '',
     name: '',
@@ -117,7 +117,7 @@ export default function EditContactPage({ params, searchParams }: PageProps) {
       }
 
       try {
-        const docRef = doc(db, 'contacts', params.id)
+        const docRef = doc(db, 'contacts', id)
         const docSnap = await getDoc(docRef)
         
         if (!docSnap.exists()) {
@@ -136,11 +136,11 @@ export default function EditContactPage({ params, searchParams }: PageProps) {
         // Fetch relationships
         const relationshipsQuery = query(
           collection(db, 'relationships'),
-          where('sourceId', '==', params.id)
+          where('sourceId', '==', id)
         )
         const reverseRelationshipsQuery = query(
           collection(db, 'relationships'),
-          where('targetId', '==', params.id)
+          where('targetId', '==', id)
         )
 
         const [relationshipsSnap, reverseRelationshipsSnap] = await Promise.all([
@@ -223,12 +223,28 @@ export default function EditContactPage({ params, searchParams }: PageProps) {
           }
         }))
 
-        // Filter out any null values and combine relationships
+        // Set form data first
+        const birthday = data.birthday ? new Date(data.birthday) : null
+        const newFormData = {
+          id: docSnap.id,
+          name: data.name,
+          email: data.email || '',
+          phone: data.phone || '',
+          address: data.address || '',
+          company: data.company || '',
+          jobTitle: data.jobTitle || '',
+          notes: data.notes || '',
+          photoUrl: data.photoUrl || '',
+          birthday,
+          tags: Array.isArray(data.tags) ? data.tags : [],
+        }
+        setFormData(newFormData)
+
+        // Then use the new form data for relationships
         const validRelationships = (
           [...relationships, ...reverseRelationships]
             .filter((r): r is NonNullable<typeof r> => r !== null)
             .filter((relationship, index, self) => {
-              // Keep only the first occurrence of each relationship pair
               return index === self.findIndex(r => 
                 (r.sourceId === relationship.sourceId && r.targetId === relationship.targetId) ||
                 (r.sourceId === relationship.targetId && r.targetId === relationship.sourceId)
@@ -243,30 +259,13 @@ export default function EditContactPage({ params, searchParams }: PageProps) {
                 type: r.type,
                 isMutual: r.isMutual,
                 createdAt: r.createdAt,
-                source: isForwardRelationship ? formData : r.source,
-                target: isForwardRelationship ? r.target : formData
+                source: isForwardRelationship ? newFormData : r.source,
+                target: isForwardRelationship ? r.target : newFormData
               };
             })
         ) as RelatedContact[]
         
         setAllRelationships(validRelationships)
-
-        // Set form data
-        const birthday = data.birthday ? new Date(data.birthday) : null
-        setFormData({
-          id: docSnap.id,
-          name: data.name,
-          email: data.email || '',
-          phone: data.phone || '',
-          address: data.address || '',
-          company: data.company || '',
-          jobTitle: data.jobTitle || '',
-          notes: data.notes || '',
-          photoUrl: data.photoUrl || '',
-          birthday,
-          tags: Array.isArray(data.tags) ? data.tags : [],
-        })
-
         setIsLoading(false)
       } catch (error) {
         console.error('Error:', error)
@@ -276,7 +275,7 @@ export default function EditContactPage({ params, searchParams }: PageProps) {
     })
 
     return () => unsubscribe()
-  }, [params.id, router, formData])
+  }, [id, router])
 
   // Reset selected index when search results change
   useEffect(() => {
@@ -334,10 +333,10 @@ export default function EditContactPage({ params, searchParams }: PageProps) {
         updatedAt: new Date().toISOString(),
       }
 
-      const docRef = doc(db, 'contacts', params.id)
+      const docRef = doc(db, 'contacts', id)
       await updateDoc(docRef, contactData)
 
-      router.push(`/contacts/${params.id}`)
+      router.push(`/contacts/${id}`)
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to update contact')
       console.error('Error updating contact:', error)
@@ -376,7 +375,7 @@ export default function EditContactPage({ params, searchParams }: PageProps) {
 
     setIsDeleting(true)
     try {
-      const docRef = doc(db, 'contacts', params.id)
+      const docRef = doc(db, 'contacts', id)
       await deleteDoc(docRef)
       router.push('/contacts')
     } catch (error) {
@@ -407,7 +406,7 @@ export default function EditContactPage({ params, searchParams }: PageProps) {
       querySnapshot.forEach((doc) => {
         const data = doc.data() as DocumentData
         // Only include contacts that match the search query and aren't the current contact
-        if (doc.id !== params.id && 
+        if (doc.id !== id && 
             data.name.toLowerCase().includes(searchText.toLowerCase())) {
           results.push({
             id: doc.id,
@@ -449,7 +448,7 @@ export default function EditContactPage({ params, searchParams }: PageProps) {
     try {
       // Create the relationship
       const relationshipData = {
-        sourceId: params.id,
+        sourceId: id,
         targetId: targetContact.id,
         type: 'connected',
         isMutual: true,
@@ -461,7 +460,7 @@ export default function EditContactPage({ params, searchParams }: PageProps) {
       // If mutual, create the reverse relationship
       await addDoc(collection(db, 'relationships'), {
         sourceId: targetContact.id,
-        targetId: params.id,
+        targetId: id,
         type: 'connected',
         isMutual: true,
         createdAt: new Date().toISOString(),
@@ -469,7 +468,7 @@ export default function EditContactPage({ params, searchParams }: PageProps) {
 
       const newRelationship: RelatedContact = {
         id: relationshipRef.id,
-        sourceId: params.id,
+        sourceId: id,
         targetId: targetContact.id,
         type: 'connected',
         isMutual: true,
@@ -571,7 +570,7 @@ export default function EditContactPage({ params, searchParams }: PageProps) {
                 </div>
                 <div className="flex items-center gap-x-4">
                   <Link
-                    href={`/contacts/${params.id}`}
+                    href={`/contacts/${id}`}
                     className="text-sm font-semibold text-gray-900 hover:text-gray-700"
                   >
                     Cancel
@@ -686,7 +685,7 @@ export default function EditContactPage({ params, searchParams }: PageProps) {
                                 photoUrl: newPhotoUrl,
                                 tags: formData.tags.map(tag => tag.name),
                               }
-                              const docRef = doc(db, 'contacts', params.id)
+                              const docRef = doc(db, 'contacts', id)
                               await updateDoc(docRef, contactData)
 
                               // After successful database update, delete the old image
@@ -936,7 +935,7 @@ export default function EditContactPage({ params, searchParams }: PageProps) {
                     <div className="mt-4 space-y-3">
                       {allRelationships.length > 0 ? (
                         allRelationships.map((relationship) => {
-                          const relatedContact = relationship.sourceId === params.id ? relationship.target : relationship.source
+                          const relatedContact = relationship.sourceId === id ? relationship.target : relationship.source
                           return (
                             <div key={relationship.id} className="flex items-center justify-between">
                               <span className="text-sm text-gray-900">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import ContactDetails from './ContactDetails'
 import { doc, getDoc } from 'firebase/firestore'
@@ -42,7 +42,7 @@ type RelatedContact = {
 }
 
 type PageProps = {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 async function getContact(id: string): Promise<Contact | null> {
@@ -79,6 +79,7 @@ export default function ContactPage({ params }: PageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const { id } = use(params)
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -88,7 +89,7 @@ export default function ContactPage({ params }: PageProps) {
       }
 
       try {
-        const contact = await getContact(params.id)
+        const contact = await getContact(id)
         if (!contact) {
           setError('Contact not found')
           return
@@ -107,7 +108,7 @@ export default function ContactPage({ params }: PageProps) {
     })
 
     return () => unsubscribe()
-  }, [params.id, router])
+  }, [id, router])
 
   if (isLoading) {
     return (
