@@ -3,8 +3,11 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ContactDetails from './ContactDetails'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, collection, query, where, getDocs, DocumentData } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
+import { use } from 'react'
+import { Metadata, ResolvingMetadata } from 'next'
+import { notFound } from 'next/navigation'
 
 type Tag = {
   id: string
@@ -42,7 +45,7 @@ type RelatedContact = {
 }
 
 type PageProps = {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 async function getContact(id: string): Promise<Contact | null> {
@@ -74,70 +77,27 @@ async function getContact(id: string): Promise<Contact | null> {
   }
 }
 
-export default function ContactPage({ params }: PageProps) {
-  const [contact, setContact] = useState<Contact | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (!user) {
-        router.push('/')
-        return
-      }
-
-      try {
-        const contact = await getContact(params.id)
-        if (!contact) {
-          setError('Contact not found')
-          return
-        }
-        if (contact.userId !== user.uid) {
-          setError('Unauthorized')
-          return
-        }
-        setContact(contact)
-      } catch (error) {
-        console.error('Error:', error)
-        setError(error instanceof Error ? error.message : 'An error occurred')
-      } finally {
-        setIsLoading(false)
-      }
-    })
-
-    return () => unsubscribe()
-  }, [params.id, router])
-
-  if (isLoading) {
-    return (
-      <div className="py-10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">Loading...</div>
-        </div>
-      </div>
-    )
+export async function generateMetadata(
+  { params }: { params: { id: string } },
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  const contact = await getContact(params.id)
+  
+  return {
+    title: contact ? `${contact.name} - Personal CRM` : 'Contact Not Found - Personal CRM'
   }
+}
 
-  if (error) {
-    return (
-      <div className="py-10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center text-red-600">{error}</div>
-        </div>
-      </div>
-    )
+export default async function ContactPage({ params }: { params: { id: string } }) {
+  try {
+    const contact = await getContact(params.id)
+    if (!contact) {
+      notFound()
+    }
+    return <ContactDetails contact={contact} />
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
+    console.error('Error loading contact:', error)
+    return <div>Error loading contact: {errorMessage}</div>
   }
-
-  if (!contact) {
-    return null
-  }
-
-  return (
-    <div className="py-10">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <ContactDetails contact={contact} />
-      </div>
-    </div>
-  )
 } 

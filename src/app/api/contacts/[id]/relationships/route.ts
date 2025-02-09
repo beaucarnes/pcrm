@@ -1,4 +1,4 @@
-import { NextResponse, NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
 
@@ -11,7 +11,7 @@ const RelationshipSchema = z.object({
 })
 
 export async function POST(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -73,7 +73,7 @@ export async function POST(
 }
 
 export async function GET(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -101,7 +101,7 @@ export async function GET(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
