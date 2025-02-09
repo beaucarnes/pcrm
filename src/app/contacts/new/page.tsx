@@ -155,7 +155,7 @@ export default function NewContactPage() {
                   }));
                 }
               }}
-              onQueuesEnd={(result) => {
+              onQueuesEnd={() => {
                 setIsUploading(false);
               }}
               options={{
