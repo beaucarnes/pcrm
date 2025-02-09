@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import ContactDetails from './ContactDetails'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, query, collection, getDocs, where } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
 
 type Tag = {
@@ -54,6 +54,101 @@ async function getContact(id: string): Promise<Contact | null> {
   }
 
   const data = docSnap.data()
+
+  // Fetch relationships
+  const relationshipsQuery = query(
+    collection(db, 'relationships'),
+    where('sourceId', '==', id)
+  )
+  const reverseRelationshipsQuery = query(
+    collection(db, 'relationships'),
+    where('targetId', '==', id)
+  )
+
+  const [relationshipsSnap, reverseRelationshipsSnap] = await Promise.all([
+    getDocs(relationshipsQuery),
+    getDocs(reverseRelationshipsQuery)
+  ])
+
+  // Fetch related contacts data
+  const relationships = await Promise.all(relationshipsSnap.docs.map(async relationshipDoc => {
+    const relationshipData = relationshipDoc.data()
+    const targetDocRef = doc(db, 'contacts', relationshipData.targetId)
+    const targetDocSnap = await getDoc(targetDocRef)
+    const targetData = targetDocSnap.data()
+    if (!targetData) {
+      console.error('Target contact data not found')
+      return null
+    }
+    const target = {
+      id: targetDocSnap.id,
+      name: targetData.name || '',
+      birthday: targetData.birthday || null,
+      photoUrl: targetData.photoUrl || null,
+      email: targetData.email || null,
+      phone: targetData.phone || null,
+      address: targetData.address || null,
+      company: targetData.company || null,
+      jobTitle: targetData.jobTitle || null,
+      notes: targetData.notes || null,
+      tags: targetData.tags || [],
+      userId: targetData.userId,
+      createdAt: targetData.createdAt,
+      updatedAt: targetData.updatedAt,
+      relationships: [],
+      reverseRelationships: []
+    }
+    return {
+      id: relationshipDoc.id,
+      sourceId: relationshipData.sourceId,
+      targetId: relationshipData.targetId,
+      type: relationshipData.type,
+      isMutual: relationshipData.isMutual,
+      createdAt: relationshipData.createdAt,
+      source: data as Contact,
+      target
+    }
+  }))
+
+  const reverseRelationships = await Promise.all(reverseRelationshipsSnap.docs.map(async relationshipDoc => {
+    const relationshipData = relationshipDoc.data()
+    const sourceDocRef = doc(db, 'contacts', relationshipData.sourceId)
+    const sourceDocSnap = await getDoc(sourceDocRef)
+    const sourceData = sourceDocSnap.data()
+    if (!sourceData) {
+      console.error('Source contact data not found')
+      return null
+    }
+    const source = {
+      id: sourceDocSnap.id,
+      name: sourceData.name || '',
+      birthday: sourceData.birthday || null,
+      photoUrl: sourceData.photoUrl || null,
+      email: sourceData.email || null,
+      phone: sourceData.phone || null,
+      address: sourceData.address || null,
+      company: sourceData.company || null,
+      jobTitle: sourceData.jobTitle || null,
+      notes: sourceData.notes || null,
+      tags: sourceData.tags || [],
+      userId: sourceData.userId,
+      createdAt: sourceData.createdAt,
+      updatedAt: sourceData.updatedAt,
+      relationships: [],
+      reverseRelationships: []
+    }
+    return {
+      id: relationshipDoc.id,
+      sourceId: relationshipData.sourceId,
+      targetId: relationshipData.targetId,
+      type: relationshipData.type,
+      isMutual: relationshipData.isMutual,
+      createdAt: relationshipData.createdAt,
+      source,
+      target: data as Contact
+    }
+  }))
+
   return {
     id: docSnap.id,
     name: data.name,
@@ -69,8 +164,8 @@ async function getContact(id: string): Promise<Contact | null> {
     userId: data.userId,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
-    relationships: [],
-    reverseRelationships: []
+    relationships: relationships.filter((r): r is NonNullable<typeof r> => r !== null),
+    reverseRelationships: reverseRelationships.filter((r): r is NonNullable<typeof r> => r !== null)
   }
 }
 

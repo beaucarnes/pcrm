@@ -251,11 +251,11 @@ export default function ContactDetails({ contact }: { contact: Contact }) {
           {allRelationships.length > 0 && (
             <div>
               <h3 className="text-base font-semibold text-gray-900">Related Contacts</h3>
-              <div className="mt-3 space-y-3">
+              <div className="mt-3 space-y-2">
                 {allRelationships.map((relationship) => {
-                  const relatedContact = relationship.sourceId === contact.id ? relationship.target : relationship.source
+                  const relatedContact = relationship.sourceId === contact.id ? relationship.target : relationship.source;
                   return (
-                    <div key={relationship.id} className="flex items-center">
+                    <div key={relationship.id} className="flex items-center justify-between">
                       <Link
                         href={`/contacts/${relatedContact.id}`}
                         className="text-sm text-indigo-600 hover:text-indigo-500"
@@ -263,7 +263,7 @@ export default function ContactDetails({ contact }: { contact: Contact }) {
                         {relatedContact.name}
                       </Link>
                     </div>
-                  )
+                  );
                 })}
               </div>
             </div>
