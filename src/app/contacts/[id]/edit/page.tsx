@@ -12,7 +12,9 @@ import { use } from 'react'
 
 declare global {
   interface Window {
-    cloudinary: any;
+    cloudinary: {
+      createUploadWidget: (options: any, callback: (error: Error | null, result: { event: string; info?: { secure_url: string } }) => void) => any;
+    };
   }
 }
 
@@ -300,7 +302,7 @@ export default function EditContactPage({ params }: PageProps) {
                             }
                           }
                         },
-                        async (error: any, result: any) => {
+                        async (error: Error | null, result: { event: string; info?: { secure_url: string } }) => {
                           if (error) {
                             console.error('Upload error:', error);
                             setError('Failed to upload image');

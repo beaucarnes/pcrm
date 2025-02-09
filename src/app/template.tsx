@@ -1,6 +1,7 @@
 'use client'
 
 import SignInButton from '../app/components/SignInButton'
+import Link from 'next/link'
 
 export default function Template({
   children,
@@ -14,9 +15,9 @@ export default function Template({
           <div className="flex h-16 justify-between items-center">
             <div className="flex">
               <div className="flex flex-shrink-0 items-center">
-                <a href="/" className="text-2xl font-bold text-indigo-600">
+                <Link href="/" className="text-2xl font-bold text-indigo-600">
                   PersonalCRM
-                </a>
+                </Link>
               </div>
             </div>
             <div className="flex items-center">
