@@ -105,30 +105,10 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').then(
-                    function(registration) {
-                      console.log('Service Worker registration successful');
-                      
-                      // Check for updates every hour
-                      setInterval(() => {
-                        registration.update();
-                        
-                        // Check version
-                        const messageChannel = new MessageChannel();
-                        messageChannel.port1.onmessage = (event) => {
-                          if (event.data.version) {
-                            console.log('Current version:', event.data.version);
-                            // You can compare versions here and show update notification if needed
-                          }
-                        };
-                        registration.active.postMessage('CHECK_VERSION', [messageChannel.port2]);
-                      }, 3600000); // 1 hour
-                    },
-                    function(err) {
-                      console.log('Service Worker registration failed: ', err);
-                    }
-                  );
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                  for(let registration of registrations) {
+                    registration.unregister();
+                  }
                 });
               }
             `,

@@ -2,20 +2,28 @@ const CACHE_NAME = 'pcrm-cache-v2';
 const VERSION = '1.0.1';
 
 const STATIC_ASSETS = [
-  '/',
   '/manifest.json',
   '/favicon.ico',
-  '/app-icon.png',
-  '/icons/icon-192x192.png',
-  '/icons/icon-384x384.png',
-  '/icons/icon-512x512.png'
+  '/favicon-16x16.png',
+  '/favicon-32x32.png',
+  '/favicon-48x48.png',
+  '/icons/icon-192x192.png'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    })
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        // Cache what we can and ignore failures
+        return Promise.allSettled(
+          STATIC_ASSETS.map(url => 
+            cache.add(url).catch(err => {
+              console.warn(`Failed to cache ${url}:`, err);
+              return null;
+            })
+          )
+        );
+      })
   );
 });
 
@@ -67,21 +75,27 @@ self.addEventListener('fetch', (event) => {
   } else {
     // Cache-first strategy for static assets
     event.respondWith(
-      caches.match(event.request).then((response) => {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request).then((response) => {
-          if (!response || response.status !== 200 || response.type !== 'basic') {
+      caches.match(event.request)
+        .then((response) => {
+          if (response) {
             return response;
           }
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-          return response;
-        });
-      })
+          return fetch(event.request)
+            .then((response) => {
+              if (!response || response.status !== 200 || response.type !== 'basic') {
+                return response;
+              }
+              const responseToCache = response.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, responseToCache);
+              });
+              return response;
+            })
+            .catch(error => {
+              console.error('Fetch failed:', error);
+              return new Response('Network error', { status: 408, statusText: 'Network error' });
+            });
+        })
     );
   }
 }); 
