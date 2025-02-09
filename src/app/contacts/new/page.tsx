@@ -174,7 +174,8 @@ export default function NewContactPage() {
                 maxImageFileSize: 10000000, // 10MB
                 showAdvancedOptions: false,
                 defaultSource: 'local',
-                singleUploadAutoClose: false,
+                singleUploadAutoClose: true,
+                showCloseButton: true,
                 theme: 'minimal',
                 resourceType: 'image',
                 folder: 'contacts',

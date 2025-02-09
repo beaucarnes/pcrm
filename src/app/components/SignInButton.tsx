@@ -2,19 +2,30 @@
 
 import { useEffect, useState } from 'react';
 import { auth } from '@/lib/firebase';
-import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut } from 'firebase/auth';
 
 export default function SignInButton() {
   const [user, setUser] = useState(auth.currentUser);
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setUser(user);
     });
+
+    // Check for redirect result
+    getRedirectResult(auth).then((result) => {
+      setIsSigningIn(false);
+    }).catch((error) => {
+      console.error('Error getting redirect result:', error);
+      setIsSigningIn(false);
+    });
+
     return () => unsubscribe();
   }, []);
 
   const signInWithGoogle = async () => {
+    setIsSigningIn(true);
     const provider = new GoogleAuthProvider();
     // Force account selection even when one account is available
     provider.setCustomParameters({
@@ -22,9 +33,10 @@ export default function SignInButton() {
     });
     
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithRedirect(auth, provider);
     } catch (error) {
       console.error('Error signing in with Google', error);
+      setIsSigningIn(false);
     }
   };
 
@@ -50,9 +62,10 @@ export default function SignInButton() {
   return (
     <button
       onClick={signInWithGoogle}
-      className="text-sm font-semibold text-gray-900 hover:text-gray-700"
+      disabled={isSigningIn}
+      className="text-sm font-semibold text-gray-900 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      Sign in with Google
+      {isSigningIn ? 'Signing in...' : 'Sign in with Google'}
     </button>
   );
 } 
