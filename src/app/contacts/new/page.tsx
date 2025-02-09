@@ -175,7 +175,7 @@ export default function NewContactPage() {
                 showAdvancedOptions: false,
                 defaultSource: 'local',
                 singleUploadAutoClose: true,
-                showCloseButton: true,
+                showCompletedButton: false,
                 theme: 'minimal',
                 resourceType: 'image',
                 folder: 'contacts',

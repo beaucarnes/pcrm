@@ -283,7 +283,7 @@ export default function EditContactPage({ params }: PageProps) {
                           showAdvancedOptions: false,
                           defaultSource: 'local',
                           singleUploadAutoClose: true,
-                          showCloseButton: true,
+                          showCompletedButton: false,
                           theme: 'minimal',
                           resourceType: 'image',
                           folder: 'contacts',

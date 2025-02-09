@@ -17,7 +17,7 @@ export type CloudinaryWidgetOptions = {
   showAdvancedOptions: boolean;
   defaultSource: string;
   singleUploadAutoClose: boolean;
-  showCloseButton?: boolean;
+  showCompletedButton?: boolean;
   theme: string;
   resourceType: string;
   folder: string;
