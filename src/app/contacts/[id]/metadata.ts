@@ -1,4 +1,4 @@
-import { Metadata, ResolvingMetadata } from 'next'
+import { Metadata } from 'next'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 
@@ -17,8 +17,7 @@ async function getContact(id: string) {
 }
 
 export async function generateMetadata(
-  { params }: { params: { id: string } },
-  parent: ResolvingMetadata
+  { params }: { params: { id: string } }
 ): Promise<Metadata> {
   const contact = await getContact(params.id)
   
