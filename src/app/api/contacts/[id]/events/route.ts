@@ -10,17 +10,12 @@ const EventSchema = z.object({
   description: z.string().nullable(),
 })
 
-type RouteContext = {
-  params: {
-    id: string
-  }
-}
-
 export async function POST(
-  request: NextRequest,
-  { params }: RouteContext
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await request.json()
     const validatedData = EventSchema.parse(body)
 
@@ -29,7 +24,7 @@ export async function POST(
         date: new Date(validatedData.date),
         title: validatedData.title,
         description: validatedData.description,
-        contactId: params.id,
+        contactId: id,
       },
     })
 
@@ -44,13 +39,14 @@ export async function POST(
 }
 
 export async function GET(
-  request: NextRequest,
-  { params }: RouteContext
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const events = await prisma.event.findMany({
       where: {
-        contactId: params.id,
+        contactId: id,
       },
       orderBy: {
         date: 'desc',
