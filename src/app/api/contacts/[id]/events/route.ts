@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
 
@@ -10,15 +10,9 @@ const EventSchema = z.object({
   description: z.string().nullable(),
 })
 
-type RouteContext = {
-  params: {
-    id: string;
-  };
-}
-
 export async function POST(
-  request: Request,
-  context: RouteContext
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
     const body = await request.json()
@@ -29,7 +23,7 @@ export async function POST(
         date: new Date(validatedData.date),
         title: validatedData.title,
         description: validatedData.description,
-        contactId: context.params.id,
+        contactId: params.id,
       },
     })
 
@@ -44,13 +38,13 @@ export async function POST(
 }
 
 export async function GET(
-  request: Request,
-  context: RouteContext
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
     const events = await prisma.event.findMany({
       where: {
-        contactId: context.params.id,
+        contactId: params.id,
       },
       orderBy: {
         date: 'desc',
