@@ -1,3 +1,4 @@
+import { Metadata } from 'next'
 import './globals.css'
 import { Inter } from 'next/font/google'
 import SignInButton from './components/SignInButton'
@@ -60,6 +61,10 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Personal CRM" />
+        <Script
+          src="https://upload-widget.cloudinary.com/global/all.js"
+          strategy="beforeInteractive"
+        />
         <style>
           {`
             @media all and (display-mode: standalone) {
