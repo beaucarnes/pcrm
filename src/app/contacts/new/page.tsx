@@ -171,7 +171,7 @@ export default function NewContactPage() {
                 showSkipCropButton: false,
                 multiple: false,
                 clientAllowedFormats: ['image'],
-                maxImageFileSize: 10000000, // 10MB
+                maxImageFileSize: 20000000, // 10MB
                 showAdvancedOptions: false,
                 defaultSource: 'local',
                 singleUploadAutoClose: true,

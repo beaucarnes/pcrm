@@ -46,18 +46,19 @@ export default function SignInButton() {
     <div className="flex items-center gap-4">
       {user ? (
         <>
-          <Link
-            href="/contacts/new"
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 whitespace-nowrap"
-          >
-            Add Contact
-          </Link>
+
           <button
             onClick={handleSignOut}
             className="text-sm font-semibold text-gray-900 hover:text-gray-700"
           >
             Sign out
           </button>
+          <Link
+            href="/contacts/new"
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 whitespace-nowrap"
+          >
+            Add Contact
+          </Link>
         </>
       ) : (
         <button
