@@ -145,7 +145,7 @@ export default function NewContactPage() {
             </div>
             <CldUploadWidget
               uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET}
-              onSuccess={(result, { widget }) => {
+              onSuccess={(result) => {
                 console.log('Upload result:', result);
                 const uploadResult = result as CloudinaryUploadResult;
                 if (uploadResult?.info?.secure_url) {
@@ -155,7 +155,7 @@ export default function NewContactPage() {
                   }));
                 }
               }}
-              onQueuesEnd={(result, { widget }) => {
+              onQueuesEnd={(result) => {
                 setIsUploading(false);
               }}
               options={{

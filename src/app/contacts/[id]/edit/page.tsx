@@ -30,6 +30,13 @@ type Contact = {
   birthday?: string | null;
 }
 
+type CloudinaryCallbackResult = {
+  event: string;
+  info?: {
+    secure_url: string;
+  };
+}
+
 type PageProps = {
   params: Promise<{ id: string }>
 }
@@ -39,7 +46,7 @@ declare global {
     cloudinary: {
       createUploadWidget: (
         options: CloudinaryWidgetOptions,
-        callback: (error: Error | null, result: { event: string; info?: { secure_url: string } }) => void
+        callback: (error: Error | null, result: CloudinaryCallbackResult) => void
       ) => { open: () => void };
     };
   }
@@ -306,7 +313,7 @@ export default function EditContactPage({ params }: PageProps) {
                             }
                           }
                         },
-                        async (error: Error | null, result: { event: string; info?: { secure_url: string } }) => {
+                        async (error: Error | null, result: CloudinaryCallbackResult) => {
                           if (error) {
                             console.error('Upload error:', error);
                             setError('Failed to upload image');
