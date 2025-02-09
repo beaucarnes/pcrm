@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import ContactDetails from './ContactDetails'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
-import { notFound } from 'next/navigation'
 
 type Tag = {
   id: string

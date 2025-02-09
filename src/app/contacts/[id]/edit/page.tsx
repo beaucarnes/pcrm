@@ -277,7 +277,7 @@ export default function EditContactPage({ params }: PageProps) {
     })
 
     return () => unsubscribe()
-  }, [id, router])
+  }, [id, router, formData])
 
   // Reset selected index when search results change
   useEffect(() => {
