@@ -8,7 +8,6 @@ import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css"
 import { doc, getDoc, updateDoc, deleteDoc, addDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
-import { use } from 'react'
 import { CloudinaryWidgetOptions } from '@/types/cloudinary'
 import { DocumentData } from 'firebase/firestore'
 
@@ -58,7 +57,7 @@ type CloudinaryCallbackResult = {
 }
 
 type PageProps = {
-  params: Promise<{ id: string }>
+  params: { id: string }
 }
 
 declare global {
@@ -84,7 +83,6 @@ type RelatedContact = {
 }
 
 export default function EditContactPage({ params }: PageProps) {
-  const { id } = use(params)
   const router = useRouter()
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -118,7 +116,7 @@ export default function EditContactPage({ params }: PageProps) {
       }
 
       try {
-        const docRef = doc(db, 'contacts', id)
+        const docRef = doc(db, 'contacts', params.id)
         const docSnap = await getDoc(docRef)
         
         if (!docSnap.exists()) {
@@ -137,11 +135,11 @@ export default function EditContactPage({ params }: PageProps) {
         // Fetch relationships
         const relationshipsQuery = query(
           collection(db, 'relationships'),
-          where('sourceId', '==', id)
+          where('sourceId', '==', params.id)
         )
         const reverseRelationshipsQuery = query(
           collection(db, 'relationships'),
-          where('targetId', '==', id)
+          where('targetId', '==', params.id)
         )
 
         const [relationshipsSnap, reverseRelationshipsSnap] = await Promise.all([
@@ -277,7 +275,7 @@ export default function EditContactPage({ params }: PageProps) {
     })
 
     return () => unsubscribe()
-  }, [id, router, formData])
+  }, [params.id, router, formData])
 
   // Reset selected index when search results change
   useEffect(() => {
@@ -335,10 +333,10 @@ export default function EditContactPage({ params }: PageProps) {
         updatedAt: new Date().toISOString(),
       }
 
-      const docRef = doc(db, 'contacts', id)
+      const docRef = doc(db, 'contacts', params.id)
       await updateDoc(docRef, contactData)
 
-      router.push(`/contacts/${id}`)
+      router.push(`/contacts/${params.id}`)
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to update contact')
       console.error('Error updating contact:', error)
@@ -377,7 +375,7 @@ export default function EditContactPage({ params }: PageProps) {
 
     setIsDeleting(true)
     try {
-      const docRef = doc(db, 'contacts', id)
+      const docRef = doc(db, 'contacts', params.id)
       await deleteDoc(docRef)
       router.push('/contacts')
     } catch (error) {
@@ -408,7 +406,7 @@ export default function EditContactPage({ params }: PageProps) {
       querySnapshot.forEach((doc) => {
         const data = doc.data() as DocumentData
         // Only include contacts that match the search query and aren't the current contact
-        if (doc.id !== id && 
+        if (doc.id !== params.id && 
             data.name.toLowerCase().includes(searchText.toLowerCase())) {
           results.push({
             id: doc.id,
@@ -450,7 +448,7 @@ export default function EditContactPage({ params }: PageProps) {
     try {
       // Create the relationship
       const relationshipData = {
-        sourceId: id,
+        sourceId: params.id,
         targetId: targetContact.id,
         type: 'connected',
         isMutual: true,
@@ -462,7 +460,7 @@ export default function EditContactPage({ params }: PageProps) {
       // If mutual, create the reverse relationship
       await addDoc(collection(db, 'relationships'), {
         sourceId: targetContact.id,
-        targetId: id,
+        targetId: params.id,
         type: 'connected',
         isMutual: true,
         createdAt: new Date().toISOString(),
@@ -470,7 +468,7 @@ export default function EditContactPage({ params }: PageProps) {
 
       const newRelationship: RelatedContact = {
         id: relationshipRef.id,
-        sourceId: id,
+        sourceId: params.id,
         targetId: targetContact.id,
         type: 'connected',
         isMutual: true,
@@ -572,7 +570,7 @@ export default function EditContactPage({ params }: PageProps) {
                 </div>
                 <div className="flex items-center gap-x-4">
                   <Link
-                    href={`/contacts/${id}`}
+                    href={`/contacts/${params.id}`}
                     className="text-sm font-semibold text-gray-900 hover:text-gray-700"
                   >
                     Cancel
@@ -687,7 +685,7 @@ export default function EditContactPage({ params }: PageProps) {
                                 photoUrl: newPhotoUrl,
                                 tags: formData.tags.map(tag => tag.name),
                               }
-                              const docRef = doc(db, 'contacts', id)
+                              const docRef = doc(db, 'contacts', params.id)
                               await updateDoc(docRef, contactData)
 
                               // After successful database update, delete the old image
@@ -937,7 +935,7 @@ export default function EditContactPage({ params }: PageProps) {
                     <div className="mt-4 space-y-3">
                       {allRelationships.length > 0 ? (
                         allRelationships.map((relationship) => {
-                          const relatedContact = relationship.sourceId === id ? relationship.target : relationship.source
+                          const relatedContact = relationship.sourceId === params.id ? relationship.target : relationship.source
                           return (
                             <div key={relationship.id} className="flex items-center justify-between">
                               <span className="text-sm text-gray-900">
