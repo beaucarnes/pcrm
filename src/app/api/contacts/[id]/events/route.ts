@@ -10,9 +10,16 @@ const EventSchema = z.object({
   description: z.string().nullable(),
 })
 
+type Props = {
+  params: {
+    id: string;
+  };
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: Props
 ) {
   try {
     const body = await request.json()
@@ -23,7 +30,7 @@ export async function POST(
         date: new Date(validatedData.date),
         title: validatedData.title,
         description: validatedData.description,
-        contactId: params.id,
+        contactId: props.params.id,
       },
     })
 
@@ -39,12 +46,12 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: Props
 ) {
   try {
     const events = await prisma.event.findMany({
       where: {
-        contactId: params.id,
+        contactId: props.params.id,
       },
       orderBy: {
         date: 'desc',
