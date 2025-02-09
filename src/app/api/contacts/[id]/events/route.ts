@@ -12,10 +12,10 @@ const EventSchema = z.object({
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params
+    const { id } = params
     const body = await request.json()
     const validatedData = EventSchema.parse(body)
 
@@ -40,10 +40,10 @@ export async function POST(
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params
+    const { id } = params
     const events = await prisma.event.findMany({
       where: {
         contactId: id,
